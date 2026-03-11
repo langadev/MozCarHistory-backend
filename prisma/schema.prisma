@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int                 @id @default(autoincrement())
+  email     String              @unique
+  name      String?
+  password  String
+  createdAt DateTime            @default(now())
+  role      String              @default("comprador")
+  updatedAt DateTime            @updatedAt
+  address   String?
+  nuit      String?
+  phone     String?
+  records   MaintenanceRecord[]
+}
+
+model MaintenanceRecord {
+  id          Int      @id @default(autoincrement())
+  plateNumber String
+  vin         String?
+  brandModel  String
+  mileage     Int
+  description String
+  parts       String?
+  mechanic    String?
+  date        DateTime @default(now())
+  workshopId  Int
+  createdAt   DateTime @default(now())
+  workshop    User     @relation(fields: [workshopId], references: [id])
+  photos      String[] @default([])
+}
