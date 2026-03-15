@@ -1,4 +1,4 @@
-import { Controller, Request, Post, UseGuards, Body } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 
 @Controller('auth')
@@ -9,7 +9,7 @@ export class AuthController {
     async login(@Body() body: any) {
         const user = await this.authService.validateUser(body.email, body.password, body.role);
         if (!user) {
-            throw new Error('Credenciais inválidas ou papel de utilizador incorreto');
+            throw new UnauthorizedException('Credenciais inválidas ou papel de utilizador incorreto');
         }
         return this.authService.login(user);
     }
