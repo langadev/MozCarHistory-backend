@@ -18,13 +18,27 @@ model User {
   nuit      String?
   phone     String?
   records   MaintenanceRecord[]
+  cars      Car[]
+}
+
+model Car {
+  id          Int                 @id @default(autoincrement())
+  plateNumber String              @unique
+  vin         String?             @unique
+  brandModel  String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  ownerId     Int?
+  owner       User?               @relation(fields: [ownerId], references: [id])
+
+  records     MaintenanceRecord[]
+  photos      String[]            @default([])
 }
 
 model MaintenanceRecord {
   id          Int      @id @default(autoincrement())
-  plateNumber String
-  vin         String?
-  brandModel  String
+  carId       Int
   mileage     Int
   description String
   parts       String?
@@ -32,6 +46,8 @@ model MaintenanceRecord {
   date        DateTime @default(now())
   workshopId  Int
   createdAt   DateTime @default(now())
+  
+  car         Car      @relation(fields: [carId], references: [id])
   workshop    User     @relation(fields: [workshopId], references: [id])
   photos      String[] @default([])
 }

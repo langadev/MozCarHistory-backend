@@ -15,6 +15,7 @@ export class RecordsService {
     async findByWorkshopId(workshopId: number) {
         return this.prisma.maintenanceRecord.findMany({
             where: { workshopId },
+            include: { car: true },
             orderBy: { createdAt: 'desc' },
         });
     }
@@ -22,12 +23,15 @@ export class RecordsService {
     async findByPlateNumber(plateNumber: string) {
         return this.prisma.maintenanceRecord.findMany({
             where: {
-                plateNumber: {
-                    equals: plateNumber,
-                    mode: 'insensitive'
+                car: {
+                    plateNumber: {
+                        equals: plateNumber,
+                        mode: 'insensitive'
+                    }
                 }
             },
             include: {
+                car: true,
                 workshop: {
                     select: {
                         name: true,
@@ -42,12 +46,15 @@ export class RecordsService {
     async findByVin(vin: string) {
         return this.prisma.maintenanceRecord.findMany({
             where: {
-                vin: {
-                    equals: vin,
-                    mode: 'insensitive'
+                car: {
+                    vin: {
+                        equals: vin,
+                        mode: 'insensitive'
+                    }
                 }
             },
             include: {
+                car: true,
                 workshop: {
                     select: {
                         name: true,
@@ -60,15 +67,22 @@ export class RecordsService {
     }
 
     async findAllUniqueVehicles() {
-        return this.prisma.maintenanceRecord.findMany({
+        return this.prisma.car.findMany({
             orderBy: {
                 createdAt: 'desc',
             },
-            distinct: ['plateNumber'],
             include: {
-                workshop: {
-                    select: {
-                        name: true,
+                records: {
+                    orderBy: {
+                        createdAt: 'desc'
+                    },
+                    take: 1,
+                    include: {
+                        workshop: {
+                            select: {
+                                name: true
+                            }
+                        }
                     }
                 }
             }

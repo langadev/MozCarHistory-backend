@@ -11,12 +11,14 @@ import { AppService } from './app.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { RecordsModule } from './modules/records/records.module.js';
+import { CarsModule } from './modules/cars/cars.module.js';
 
 @Module({
   imports: [
-    AuthModule, 
-    UsersModule, 
+    AuthModule,
+    UsersModule,
     RecordsModule,
+    CarsModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { RecordsService } from './records.service.js';
@@ -25,11 +25,9 @@ export class RecordsController {
                 photos = uploadResults.map(res => res.secure_url);
                 console.log('Uploaded photos:', photos);
             }
-            
+
             const data = {
-                plateNumber: body.plateNumber,
-                vin: body.vin,
-                brandModel: body.brandModel,
+                carId: Number(body.carId),
                 mileage: Number(body.mileage),
                 description: body.description,
                 parts: body.parts,
@@ -41,9 +39,18 @@ export class RecordsController {
             console.log('Final data for Prisma:', data);
 
             return await this.recordsService.create(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating record:', error);
-            throw error;
+            const msg = error.message || JSON.stringify(error);
+
+            if (msg.includes('Foreign key constraint violated on the constraint: `MaintenanceRecord_workshopId_fkey`')) {
+                throw new BadRequestException("Oficina não encontrada. Por favor, faça login novamente.");
+            }
+            if (msg.includes('Foreign key constraint violated on the constraint: `MaintenanceRecord_carId_fkey`')) {
+                throw new BadRequestException("Viatura não encontrada no sistema. Por favor, registe-a primeiro.");
+            }
+
+            throw new BadRequestException("Erro ao registar serviço: " + (error.message || "Verifique os dados."));
         }
     }
 
