@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { RecordsService } from './records.service.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { CreateRecordDto } from './dto/create-record.dto.js';
 
 @ApiTags('maintenance')
 @Controller('maintenance')
@@ -14,28 +16,15 @@ export class RecordsController {
     ) { }
 
     @Post()
+    @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Registar novo serviço de manutenção' })
     @ApiConsumes('multipart/form-data')
-    @ApiBody({
-        schema: {
-            type: 'object',
-            required: ['carId', 'mileage', 'description', 'workshopId'],
-            properties: {
-                carId: { type: 'number', example: 1 },
-                workshopId: { type: 'number', example: 2 },
-                mileage: { type: 'number', example: 45000 },
-                description: { type: 'string', example: 'Mudança de óleo e filtro de ar' },
-                parts: { type: 'string', example: 'Óleo 5W30, Filtro WIX 51516' },
-                mechanic: { type: 'string', example: 'João Machava' },
-                photos: { type: 'array', items: { type: 'string', format: 'binary' } },
-            },
-        },
-    })
     @ApiResponse({ status: 201, description: 'Registo de manutenção criado com sucesso.' })
     @ApiResponse({ status: 400, description: 'Viatura ou oficina não encontrada.' })
+    @ApiResponse({ status: 401, description: 'Token inválido ou ausente.' })
     @UseInterceptors(FilesInterceptor('photos', 5, { storage: memoryStorage() }))
-    async create(@Body() body: any, @UploadedFiles() files: Express.Multer.File[]) {
+    async create(@Body() body: CreateRecordDto, @UploadedFiles() files: Express.Multer.File[]) {
         try {
             console.log('Receiving record:', body);
             console.log('Files count:', files?.length || 0);
