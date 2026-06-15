@@ -25,7 +25,8 @@ export class AuthService {
     async login(user: any) {
         const roleName = user.role?.name ?? null;
         const mustChangePassword = user.mustChangePassword ?? false;
-        const payload = { email: user.email, sub: user.id, role: roleName, mustChangePassword };
+        const verified = user.verified ?? false;
+        const payload = { email: user.email, sub: user.id, role: roleName, mustChangePassword, verified };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -34,6 +35,7 @@ export class AuthService {
                 name: user.name,
                 role: roleName,
                 mustChangePassword,
+                verified,
             }
         };
     }

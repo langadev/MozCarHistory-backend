@@ -16,7 +16,7 @@ async function bootstrap() {
     .filter(Boolean);
 
   // Always allow local dev origins so local builds keep working
-  const devOrigins = ["http://localhost:5173", "http://localhost:8081", "http://localhost:4173"];
+  const devOrigins = ["http://localhost:5173", "http://localhost:8080", "http://localhost:4173"];
   const origins = [...new Set([...allowedOrigins, ...devOrigins])];
 
   app.enableCors({

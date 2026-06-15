@@ -12,12 +12,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         });
     }
 
-    async validate(payload: { sub: number; email: string; role: string; mustChangePassword: boolean }) {
+    async validate(payload: { sub: number; email: string; role: string; mustChangePassword: boolean; verified: boolean }) {
         return {
             userId: payload.sub,
             email: payload.email,
             role: payload.role,
             mustChangePassword: payload.mustChangePassword ?? false,
+            verified: payload.verified ?? false,
         };
     }
 }

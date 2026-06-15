@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, ForbiddenException, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -6,6 +6,7 @@ import { RecordsService } from './records.service.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { PrismaService } from '../../prisma.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { VerifiedGuard } from '../auth/verified.guard.js';
 import { CreateRecordDto } from './dto/create-record.dto.js';
 
 @ApiTags('maintenance')
@@ -18,7 +19,7 @@ export class RecordsController {
     ) { }
 
     @Post()
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, VerifiedGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Registar novo serviço de manutenção' })
     @ApiConsumes('multipart/form-data')
@@ -46,6 +47,10 @@ export class RecordsController {
             if (req.user?.role === 'mecanico') {
                 const mechanic = await this.prisma.mechanic.findUnique({ where: { userId: req.user.userId } });
                 if (!mechanic) throw new BadRequestException('Perfil de mecânico não encontrado');
+                const workshop = await this.prisma.user.findUnique({ where: { id: mechanic.workshopId } });
+                if (!workshop?.verified) {
+                    throw new ForbiddenException('A oficina associada ainda não foi verificada. Contacte o administrador para activar a conta da oficina.');
+                }
                 workshopId = mechanic.workshopId;
                 mechanicId = mechanic.id;
             }

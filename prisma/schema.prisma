@@ -70,6 +70,8 @@ model Car {
   engineSize     String?
   bodyType       String?
   initialMileage Int?
+  approvalStatus String              @default("pendente")
+  approvalNote   String?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 

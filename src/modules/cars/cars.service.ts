@@ -45,6 +45,7 @@ export class CarsService {
         const term = q.trim();
         const cars = await this.prisma.car.findMany({
             where: {
+                approvalStatus: 'aprovada',
                 OR: [
                     { plateNumber: { contains: term, mode: 'insensitive' } },
                     { vin: { contains: term, mode: 'insensitive' } },

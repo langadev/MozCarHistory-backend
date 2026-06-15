@@ -5,6 +5,7 @@ import { memoryStorage } from 'multer';
 import { CarsService } from './cars.service.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { VerifiedGuard } from '../auth/verified.guard.js';
 import { CreateCarDto } from './dto/create-car.dto.js';
 
 @ApiTags('cars')
@@ -16,7 +17,7 @@ export class CarsController {
     ) { }
 
     @Post()
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, VerifiedGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Registar nova viatura' })
     @ApiConsumes('multipart/form-data')
