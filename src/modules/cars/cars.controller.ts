@@ -1,9 +1,11 @@
 import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CarsService } from './cars.service.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 
+@ApiTags('cars')
 @Controller('cars')
 export class CarsController {
     constructor(
@@ -12,6 +14,24 @@ export class CarsController {
     ) { }
 
     @Post()
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Registar nova viatura' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            required: ['plateNumber', 'brandModel'],
+            properties: {
+                plateNumber: { type: 'string', example: 'MP-12-34-AB' },
+                vin: { type: 'string', example: '1HGBH41JXMN109186' },
+                brandModel: { type: 'string', example: 'Toyota Hilux 2020' },
+                ownerId: { type: 'number', example: 1 },
+                photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Viatura registada com sucesso.' })
+    @ApiResponse({ status: 400, description: 'Viatura já registada ou utilizador não encontrado.' })
     @UseInterceptors(FilesInterceptor('photos', 5, { storage: memoryStorage() }))
     async create(@Body() body: any, @UploadedFiles() files: Express.Multer.File[]) {
         try {
@@ -42,6 +62,9 @@ export class CarsController {
     }
 
     @Get()
+    @ApiOperation({ summary: 'Listar todas as viaturas (ou filtrar por matrícula)' })
+    @ApiQuery({ name: 'plate', required: false, description: 'Matrícula exacta para filtrar', example: 'MP-12-34-AB' })
+    @ApiResponse({ status: 200, description: 'Lista de viaturas.' })
     async findAll(@Query('plate') plate?: string) {
         if (plate) {
             const car = await this.carsService.findByPlateNumber(plate);
@@ -51,6 +74,10 @@ export class CarsController {
     }
 
     @Get(':id')
+    @ApiOperation({ summary: 'Obter viatura por ID (com histórico de manutenção)' })
+    @ApiParam({ name: 'id', type: 'number', description: 'ID da viatura', example: 1 })
+    @ApiResponse({ status: 200, description: 'Dados da viatura com registos de manutenção.' })
+    @ApiResponse({ status: 404, description: 'Viatura não encontrada.' })
     async findById(@Param('id') id: string) {
         return this.carsService.findById(Number(id));
     }

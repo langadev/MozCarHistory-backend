@@ -1,9 +1,11 @@
 import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { RecordsService } from './records.service.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 
+@ApiTags('maintenance')
 @Controller('maintenance')
 export class RecordsController {
     constructor(
@@ -12,6 +14,26 @@ export class RecordsController {
     ) { }
 
     @Post()
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Registar novo serviço de manutenção' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            required: ['carId', 'mileage', 'description', 'workshopId'],
+            properties: {
+                carId: { type: 'number', example: 1 },
+                workshopId: { type: 'number', example: 2 },
+                mileage: { type: 'number', example: 45000 },
+                description: { type: 'string', example: 'Mudança de óleo e filtro de ar' },
+                parts: { type: 'string', example: 'Óleo 5W30, Filtro WIX 51516' },
+                mechanic: { type: 'string', example: 'João Machava' },
+                photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Registo de manutenção criado com sucesso.' })
+    @ApiResponse({ status: 400, description: 'Viatura ou oficina não encontrada.' })
     @UseInterceptors(FilesInterceptor('photos', 5, { storage: memoryStorage() }))
     async create(@Body() body: any, @UploadedFiles() files: Express.Multer.File[]) {
         try {
@@ -55,11 +77,26 @@ export class RecordsController {
     }
 
     @Get('workshop/:id')
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Listar registos de manutenção de uma oficina' })
+    @ApiParam({ name: 'id', type: 'number', description: 'ID da oficina', example: 2 })
+    @ApiResponse({ status: 200, description: 'Lista de registos da oficina com dados da viatura.' })
     async findByWorkshopId(@Param('id') id: string) {
         return this.recordsService.findByWorkshopId(+id);
     }
 
+    @Get('all-vehicles')
+    @ApiOperation({ summary: 'Listar todas as viaturas com o último registo de manutenção' })
+    @ApiResponse({ status: 200, description: 'Lista de viaturas com resumo do último serviço.' })
+    async findAllVehicles() {
+        return this.recordsService.findAllUniqueVehicles();
+    }
+
     @Get('search')
+    @ApiOperation({ summary: 'Pesquisar histórico de manutenção por matrícula ou VIN' })
+    @ApiQuery({ name: 'plate', required: false, description: 'Matrícula da viatura', example: 'MP-12-34-AB' })
+    @ApiQuery({ name: 'vin', required: false, description: 'Número VIN da viatura', example: '1HGBH41JXMN109186' })
+    @ApiResponse({ status: 200, description: 'Registos de manutenção encontrados.' })
     async search(@Query('plate') plate?: string, @Query('vin') vin?: string) {
         if (plate) {
             return this.recordsService.findByPlateNumber(plate);
@@ -68,10 +105,5 @@ export class RecordsController {
             return this.recordsService.findByVin(vin);
         }
         return [];
-    }
-
-    @Get('all-vehicles')
-    async findAllVehicles() {
-        return this.recordsService.findAllUniqueVehicles();
     }
 }
