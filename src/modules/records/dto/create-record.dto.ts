@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsNumber, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -19,6 +19,11 @@ export class CreateRecordDto {
     @Min(0, { message: 'Quilometragem não pode ser negativa' })
     mileage: number;
 
+    @ApiProperty({ example: 'Troca de Óleo', required: false })
+    @IsOptional()
+    @IsString()
+    serviceType?: string;
+
     @ApiProperty({ example: 'Mudança de óleo e filtro de ar' })
     @IsNotEmpty({ message: 'Descrição obrigatória' })
     @IsString()
@@ -29,8 +34,23 @@ export class CreateRecordDto {
     @IsString()
     parts?: string;
 
-    @ApiProperty({ example: 'João Machava', required: false })
+    @ApiProperty({ example: 4500, required: false, description: 'Custo em MZN' })
     @IsOptional()
-    @IsString()
-    mechanic?: string;
+    @Type(() => Number)
+    @IsInt()
+    @Min(0)
+    cost?: number;
+
+    @ApiProperty({ example: 50000, required: false, description: 'Quilometragem do próximo serviço' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(0)
+    nextServiceMileage?: number;
+
+    @ApiProperty({ example: 1, required: false })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    mechanicId?: number;
 }

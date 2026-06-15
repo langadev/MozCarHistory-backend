@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { RecordsService } from './records.service.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
+import { PrismaService } from '../../prisma.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CreateRecordDto } from './dto/create-record.dto.js';
 
@@ -12,7 +13,8 @@ import { CreateRecordDto } from './dto/create-record.dto.js';
 export class RecordsController {
     constructor(
         private readonly recordsService: RecordsService,
-        private readonly cloudinaryService: CloudinaryService
+        private readonly cloudinaryService: CloudinaryService,
+        private readonly prisma: PrismaService,
     ) { }
 
     @Post()
@@ -24,7 +26,7 @@ export class RecordsController {
     @ApiResponse({ status: 400, description: 'Viatura ou oficina não encontrada.' })
     @ApiResponse({ status: 401, description: 'Token inválido ou ausente.' })
     @UseInterceptors(FilesInterceptor('photos', 5, { storage: memoryStorage() }))
-    async create(@Body() body: CreateRecordDto, @UploadedFiles() files: Express.Multer.File[]) {
+    async create(@Request() req: any, @Body() body: CreateRecordDto, @UploadedFiles() files: Express.Multer.File[]) {
         try {
             console.log('Receiving record:', body);
             console.log('Files count:', files?.length || 0);
@@ -37,13 +39,27 @@ export class RecordsController {
                 console.log('Uploaded photos:', photos);
             }
 
+            let workshopId = Number(body.workshopId);
+            let mechanicId = body.mechanicId ? Number(body.mechanicId) : undefined;
+
+            // When a mechanic registers a service, infer workshopId and mechanicId from their profile
+            if (req.user?.role === 'mecanico') {
+                const mechanic = await this.prisma.mechanic.findUnique({ where: { userId: req.user.userId } });
+                if (!mechanic) throw new BadRequestException('Perfil de mecânico não encontrado');
+                workshopId = mechanic.workshopId;
+                mechanicId = mechanic.id;
+            }
+
             const data = {
                 carId: Number(body.carId),
                 mileage: Number(body.mileage),
+                serviceType: body.serviceType ?? undefined,
                 description: body.description,
-                parts: body.parts,
-                mechanic: body.mechanic,
-                workshopId: Number(body.workshopId),
+                parts: body.parts ?? undefined,
+                cost: body.cost ? Number(body.cost) : undefined,
+                nextServiceMileage: body.nextServiceMileage ? Number(body.nextServiceMileage) : undefined,
+                mechanicId,
+                workshopId,
                 photos
             };
 

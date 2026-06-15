@@ -34,9 +34,17 @@ export class CarsController {
 
             return await this.carsService.create({
                 plateNumber: body.plateNumber,
-                vin: body.vin,
-                brandModel: body.brandModel,
-                ownerId: body.ownerId ? Number(body.ownerId) : null,
+                brand: body.brand,
+                model: body.model,
+                vin: body.vin ?? undefined,
+                year: body.year ? Number(body.year) : undefined,
+                color: body.color ?? undefined,
+                fuelType: body.fuelType ?? undefined,
+                transmission: body.transmission ?? undefined,
+                engineSize: body.engineSize ?? undefined,
+                bodyType: body.bodyType ?? undefined,
+                initialMileage: body.initialMileage ? Number(body.initialMileage) : undefined,
+                ownerId: body.ownerId ? Number(body.ownerId) : undefined,
                 photos,
             });
         } catch (error: any) {
@@ -50,6 +58,15 @@ export class CarsController {
             }
             throw new BadRequestException(msg);
         }
+    }
+
+    @Get('search')
+    @ApiOperation({ summary: 'Pesquisar viaturas por matrícula, VIN, marca ou modelo' })
+    @ApiQuery({ name: 'q', required: true, description: 'Termo de pesquisa', example: 'Toyota' })
+    @ApiResponse({ status: 200, description: 'Viaturas correspondentes.' })
+    async search(@Query('q') q: string) {
+        if (!q || q.trim().length < 2) return [];
+        return this.carsService.search(q);
     }
 
     @Get()

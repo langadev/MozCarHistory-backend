@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service.js';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -24,7 +24,8 @@ export class AuthService {
 
     async login(user: any) {
         const roleName = user.role?.name ?? null;
-        const payload = { email: user.email, sub: user.id, role: roleName };
+        const mustChangePassword = user.mustChangePassword ?? false;
+        const payload = { email: user.email, sub: user.id, role: roleName, mustChangePassword };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -32,6 +33,7 @@ export class AuthService {
                 email: user.email,
                 name: user.name,
                 role: roleName,
+                mustChangePassword,
             }
         };
     }
@@ -39,5 +41,21 @@ export class AuthService {
     async register(data: any) {
         const user = await this.usersService.create(data);
         return this.login(user);
+    }
+
+    async changePassword(userId: number, currentPassword: string, newPassword: string) {
+        const user = await this.usersService.findOneById(userId);
+        if (!user) throw new UnauthorizedException('Utilizador não encontrado');
+
+        const valid = await bcrypt.compare(currentPassword, user.password);
+        if (!valid) throw new UnauthorizedException('Senha atual incorreta');
+
+        if (currentPassword === newPassword) {
+            throw new BadRequestException('A nova senha não pode ser igual à atual');
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await this.usersService.updatePassword(userId, hashed);
+        return { message: 'Senha alterada com sucesso' };
     }
 }

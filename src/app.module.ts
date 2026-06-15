@@ -13,6 +13,8 @@ import { UsersModule } from './modules/users/users.module.js';
 import { RecordsModule } from './modules/records/records.module.js';
 import { CarsModule } from './modules/cars/cars.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
+import { AdminModule } from './modules/admin/admin.module.js';
+import { MechanicsModule } from './modules/mechanics/mechanics.module.js';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { RolesModule } from './modules/roles/roles.module.js';
     RecordsModule,
     CarsModule,
     RolesModule,
+    AdminModule,
+    MechanicsModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',

@@ -10,6 +10,7 @@ interface CreateUserData {
     phone?: string;
     nuit?: string;
     address?: string;
+    mustChangePassword?: boolean;
 }
 
 @Injectable()
@@ -60,7 +61,7 @@ export class UsersService {
         if (role) {
             const existingRole = await this.prisma.role.findUnique({ where: { name: role } });
             if (!existingRole) {
-                throw new BadRequestException(`Role inválida: "${role}". Valores válidos: oficina, comprador, admin`);
+                throw new BadRequestException(`Role inválida: "${role}". Valores válidos: oficina, comprador, admin, mecanico`);
             }
             roleId = existingRole.id;
         }
@@ -72,6 +73,13 @@ export class UsersService {
                 ...(roleId ? { roleId } : {}),
             },
             include: { role: true },
+        });
+    }
+
+    async updatePassword(userId: number, hashedPassword: string): Promise<void> {
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword, mustChangePassword: false },
         });
     }
 }
