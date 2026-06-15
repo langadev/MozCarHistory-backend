@@ -7,8 +7,25 @@ import { AppModule } from './app.module.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // FRONTEND_URL can be a single URL or comma-separated list of allowed origins.
+  // Example: https://moz-car-history-client.vercel.app,http://localhost:5173
+  const rawOrigins = process.env.FRONTEND_URL ?? "";
+  const allowedOrigins = rawOrigins
+    .split(",")
+    .map(o => o.trim())
+    .filter(Boolean);
+
+  // Always allow local dev origins so local builds keep working
+  const devOrigins = ["http://localhost:5173", "http://localhost:8081", "http://localhost:4173"];
+  const origins = [...new Set([...allowedOrigins, ...devOrigins])];
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (mobile apps, curl, Swagger)
+      if (!origin) return callback(null, true);
+      if (origins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS blocked: ${origin}`));
+    },
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
