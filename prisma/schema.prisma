@@ -37,6 +37,8 @@ model User {
   registeredCars     Car[]               @relation("RegisteredCars")
   workshopMechanics  Mechanic[]          @relation("WorkshopMechanics")
   mechanicProfile    Mechanic?           @relation("MechanicUser")
+  sentMessages       Message[]           @relation("SentMessages")
+  receivedMessages   Message[]           @relation("ReceivedMessages")
 }
 
 model Mechanic {
@@ -88,6 +90,18 @@ model Car {
 
   records          MaintenanceRecord[]
   photos           String[]            @default([])
+}
+
+model Message {
+  id         Int       @id @default(autoincrement())
+  content    String
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+
+  senderId   Int
+  receiverId Int
+  sender     User @relation("SentMessages",   fields: [senderId],   references: [id], onDelete: Cascade)
+  receiver   User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
 }
 
 model MaintenanceRecord {

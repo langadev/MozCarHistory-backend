@@ -15,6 +15,7 @@ import { CarsModule } from './modules/cars/cars.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { MechanicsModule } from './modules/mechanics/mechanics.module.js';
+import { MessagesModule } from './modules/messages/messages.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { MechanicsModule } from './modules/mechanics/mechanics.module.js';
     RolesModule,
     AdminModule,
     MechanicsModule,
+    MessagesModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
