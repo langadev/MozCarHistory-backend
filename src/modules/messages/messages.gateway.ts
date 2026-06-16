@@ -1,6 +1,7 @@
 import {
     WebSocketGateway, WebSocketServer, SubscribeMessage,
-    OnGatewayConnection, OnGatewayDisconnect, ConnectedSocket, MessageBody,
+    OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit,
+    ConnectedSocket, MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -10,7 +11,7 @@ import { MessagesService } from './messages.service.js';
     cors: { origin: '*' },
     namespace: '/messages',
 })
-export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class MessagesGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
     server: Server;
 
@@ -19,19 +20,29 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
         private jwtService: JwtService,
     ) {}
 
-    async handleConnection(client: Socket) {
-        try {
-            const token = client.handshake.auth?.token as string | undefined;
-            if (!token) { client.disconnect(); return; }
+    // Use Socket.IO middleware so auth failures send CONNECT_ERROR (not DISCONNECT).
+    // This prevents the client from being stuck in a silent reconnection loop.
+    afterInit(server: Server) {
+        server.use((client: Socket, next) => {
+            try {
+                const token = client.handshake.auth?.token as string | undefined;
+                if (!token) return next(new Error('NO_TOKEN'));
 
-            const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET });
-            const userId = payload.sub ?? payload.userId;
-            if (!userId) { client.disconnect(); return; }
-            client.data.userId = userId;
-            client.join(`user:${userId}`);
-        } catch {
-            client.disconnect();
-        }
+                const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET });
+                const userId = (payload.sub ?? payload.userId) as number | undefined;
+                if (!userId) return next(new Error('INVALID_PAYLOAD'));
+
+                client.data.userId = userId;
+                next();
+            } catch (err: any) {
+                next(new Error(err?.message ?? 'AUTH_ERROR'));
+            }
+        });
+    }
+
+    handleConnection(client: Socket) {
+        // Auth already verified by middleware; just join the user room.
+        client.join(`user:${client.data.userId}`);
     }
 
     handleDisconnect(_client: Socket) {}
@@ -46,10 +57,7 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
 
         const message = await this.messagesService.create(senderId, data.receiverId, data.content.trim());
 
-        // Push to receiver's room
         this.server.to(`user:${data.receiverId}`).emit('new_message', message);
-
-        // Confirm back to sender (for multi-tab / optimistic update)
         return message;
     }
 
@@ -62,8 +70,6 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
         if (!receiverId || !data?.senderId) return;
 
         await this.messagesService.markAsRead(data.senderId, receiverId);
-
-        // Notify sender that their messages were read
         this.server.to(`user:${data.senderId}`).emit('messages_read', { by: receiverId });
     }
 }
