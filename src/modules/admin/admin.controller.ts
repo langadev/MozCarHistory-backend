@@ -53,6 +53,11 @@ export class AdminController {
         return this.adminService.getWorkshops(Number(page), verifiedBool);
     }
 
+    @Get('workshops/:id')
+    getWorkshopDetail(@Param('id', ParseIntPipe) id: number) {
+        return this.adminService.getWorkshopDetail(id);
+    }
+
     @Patch('workshops/:id/verify')
     updateWorkshopVerify(
         @Param('id', ParseIntPipe) id: number,

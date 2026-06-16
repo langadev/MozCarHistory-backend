@@ -183,6 +183,66 @@ export class AdminService {
         return { message: 'Viatura e registos eliminados com sucesso' };
     }
 
+    async getWorkshopDetail(id: number) {
+        const workshop = await this.prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                phone: true,
+                nuit: true,
+                address: true,
+                verified: true,
+                suspended: true,
+                createdAt: true,
+                registeredCars: {
+                    select: {
+                        id: true,
+                        plateNumber: true,
+                        brand: true,
+                        model: true,
+                        year: true,
+                        color: true,
+                        approvalStatus: true,
+                        photos: true,
+                        createdAt: true,
+                        _count: { select: { records: true } },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                },
+                records: {
+                    select: {
+                        id: true,
+                        mileage: true,
+                        serviceType: true,
+                        description: true,
+                        cost: true,
+                        date: true,
+                        car: { select: { plateNumber: true, brand: true, model: true } },
+                        mechanic: { select: { name: true } },
+                    },
+                    orderBy: { date: 'desc' },
+                    take: 100,
+                },
+                workshopMechanics: {
+                    select: {
+                        id: true,
+                        name: true,
+                        specialty: true,
+                        phone: true,
+                        photo: true,
+                        active: true,
+                    },
+                    orderBy: { name: 'asc' },
+                },
+                _count: { select: { registeredCars: true, records: true, workshopMechanics: true } },
+            },
+        });
+        if (!workshop) throw new NotFoundException('Oficina não encontrada');
+        return workshop;
+    }
+
     async createWorkshop(data: {
         name: string;
         email: string;
