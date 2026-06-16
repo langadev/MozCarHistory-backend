@@ -28,7 +28,7 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection, OnGa
                 const token = client.handshake.auth?.token as string | undefined;
                 if (!token) return next(new Error('NO_TOKEN'));
 
-                const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET });
+                const payload = this.jwtService.verify(token, { secret: process.env.SECRET_KEY });
                 const userId = (payload.sub ?? payload.userId) as number | undefined;
                 if (!userId) return next(new Error('INVALID_PAYLOAD'));
 

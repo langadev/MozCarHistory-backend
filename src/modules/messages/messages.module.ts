@@ -7,7 +7,7 @@ import { PrismaService } from '../../prisma.service.js';
 
 @Module({
     imports: [
-        JwtModule.register({ secret: process.env.JWT_SECRET }),
+        JwtModule.register({ secret: process.env.SECRET_KEY }),
     ],
     providers: [MessagesService, MessagesGateway, PrismaService],
     controllers: [MessagesController],
