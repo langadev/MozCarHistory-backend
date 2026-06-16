@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { MessagesService } from './messages.service.js';
 
 @WebSocketGateway({
-    cors: { origin: '*', credentials: true },
+    cors: { origin: '*' },
     namespace: '/messages',
 })
 export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {
