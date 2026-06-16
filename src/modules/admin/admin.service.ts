@@ -16,11 +16,19 @@ export class AdminService {
             this.prisma.maintenanceRecord.count(),
             this.prisma.car.count({ where: { approvalStatus: 'pendente' } }),
             this.prisma.maintenanceRecord.findMany({
-                take: 5,
+                take: 30,
                 orderBy: { createdAt: 'desc' },
-                include: {
-                    car: true,
-                    workshop: { select: { name: true } },
+                select: {
+                    id: true,
+                    date: true,
+                    createdAt: true,
+                    mileage: true,
+                    serviceType: true,
+                    description: true,
+                    cost: true,
+                    car: { select: { plateNumber: true, brand: true, model: true, photos: true } },
+                    workshop: { select: { id: true, name: true } },
+                    mechanic: { select: { name: true, specialty: true } },
                 },
             }),
         ]);
