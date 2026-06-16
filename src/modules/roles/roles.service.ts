@@ -13,7 +13,10 @@ export class RolesService {
     }
 
     async findAll() {
-        return this.prisma.role.findMany();
+        return this.prisma.role.findMany({
+            include: { _count: { select: { users: true } } },
+            orderBy: { name: 'asc' },
+        });
     }
 
     async findOne(id: number) {
