@@ -25,8 +25,10 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
             if (!token) { client.disconnect(); return; }
 
             const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET });
-            client.data.userId = payload.userId;
-            client.join(`user:${payload.userId}`);
+            const userId = payload.sub ?? payload.userId;
+            if (!userId) { client.disconnect(); return; }
+            client.data.userId = userId;
+            client.join(`user:${userId}`);
         } catch {
             client.disconnect();
         }
