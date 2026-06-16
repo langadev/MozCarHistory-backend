@@ -55,7 +55,9 @@ export class CarsController {
                 throw new BadRequestException("Utilizador não encontrado (Sessão expirada ou BD limpa). Por favor, termine a sessão e faça login denovo.");
             }
             if (msg.includes('Unique constraint failed')) {
-                throw new BadRequestException("Esta viatura já se encontra registada.");
+                if (msg.includes('plateNumber')) throw new BadRequestException('Esta matrícula já se encontra registada no sistema.');
+                if (msg.includes('vin')) throw new BadRequestException('Este número de chassis (VIN) já se encontra registado no sistema.');
+                throw new BadRequestException('Esta viatura já se encontra registada.');
             }
             throw new BadRequestException(msg);
         }
@@ -77,12 +79,17 @@ export class CarsController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Listar todas as viaturas (ou filtrar por matrícula)' })
+    @ApiOperation({ summary: 'Listar todas as viaturas (ou filtrar por matrícula/VIN)' })
     @ApiQuery({ name: 'plate', required: false, description: 'Matrícula exacta para filtrar', example: 'MP-12-34-AB' })
+    @ApiQuery({ name: 'vin', required: false, description: 'VIN exacto para filtrar', example: '1HGBH41JXMN109186' })
     @ApiResponse({ status: 200, description: 'Lista de viaturas.' })
-    async findAll(@Query('plate') plate?: string) {
+    async findAll(@Query('plate') plate?: string, @Query('vin') vin?: string) {
         if (plate) {
             const car = await this.carsService.findByPlateNumber(plate);
+            return car ? [car] : [];
+        }
+        if (vin) {
+            const car = await this.carsService.findByVin(vin);
             return car ? [car] : [];
         }
         return this.carsService.findAll();
