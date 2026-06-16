@@ -41,33 +41,38 @@ export class CarsService {
         });
     }
 
-    async search(q: string) {
+    async search(q: string, page = 1, limit = 12) {
         const term = q.trim();
-        const cars = await this.prisma.car.findMany({
-            where: {
-                approvalStatus: 'aprovada',
-                OR: [
-                    { plateNumber: { contains: term, mode: 'insensitive' } },
-                    { vin: { contains: term, mode: 'insensitive' } },
-                    { brand: { contains: term, mode: 'insensitive' } },
-                    { model: { contains: term, mode: 'insensitive' } },
-                    { color: { contains: term, mode: 'insensitive' } },
-                ],
-            },
-            include: {
-                records: {
-                    orderBy: { mileage: 'desc' },
-                    include: {
-                        workshop: { select: { name: true } },
+        const skip = (page - 1) * limit;
+
+        const where = {
+            approvalStatus: 'aprovada',
+            OR: [
+                { plateNumber: { contains: term, mode: 'insensitive' as const } },
+                { vin: { contains: term, mode: 'insensitive' as const } },
+                { brand: { contains: term, mode: 'insensitive' as const } },
+                { model: { contains: term, mode: 'insensitive' as const } },
+                { color: { contains: term, mode: 'insensitive' as const } },
+            ],
+        };
+
+        const [carsRaw, total] = await Promise.all([
+            this.prisma.car.findMany({
+                where,
+                include: {
+                    records: {
+                        orderBy: { mileage: 'desc' },
+                        include: { workshop: { select: { name: true } } },
                     },
                 },
-            },
-            orderBy: { updatedAt: 'desc' },
-            take: 30,
-        });
+                orderBy: { updatedAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            this.prisma.car.count({ where }),
+        ]);
 
-        // shape the response: trim to last record, add count
-        return cars.map(({ records, ...car }) => ({
+        const cars = carsRaw.map(({ records, ...car }) => ({
             ...car,
             records: records.slice(0, 1).map(r => ({
                 mileage: r.mileage,
@@ -77,6 +82,8 @@ export class CarsService {
             })),
             _count: { records: records.length },
         }));
+
+        return { cars, total, page, pageSize: limit };
     }
 
     async findByVin(vin: string) {

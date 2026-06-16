@@ -64,10 +64,16 @@ export class CarsController {
     @Get('search')
     @ApiOperation({ summary: 'Pesquisar viaturas por matrícula, VIN, marca ou modelo' })
     @ApiQuery({ name: 'q', required: true, description: 'Termo de pesquisa', example: 'Toyota' })
-    @ApiResponse({ status: 200, description: 'Viaturas correspondentes.' })
-    async search(@Query('q') q: string) {
-        if (!q || q.trim().length < 2) return [];
-        return this.carsService.search(q);
+    @ApiQuery({ name: 'page', required: false, description: 'Página (default 1)', example: 1 })
+    @ApiQuery({ name: 'limit', required: false, description: 'Resultados por página (default 12)', example: 12 })
+    @ApiResponse({ status: 200, description: 'Viaturas correspondentes com paginação.' })
+    async search(
+        @Query('q') q: string,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+    ) {
+        if (!q || q.trim().length < 2) return { cars: [], total: 0, page: 1, pageSize: 12 };
+        return this.carsService.search(q, page ? Number(page) : 1, limit ? Number(limit) : 12);
     }
 
     @Get()

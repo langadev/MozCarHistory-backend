@@ -28,9 +28,17 @@ export class AdminService {
         return { totalUsers, totalWorkshops, totalVehicles, totalRecords, pendingVehicles, recentRecords };
     }
 
-    async getUsers(page: number, role?: string) {
+    async getUsers(page: number, role?: string, search?: string) {
         const skip = (page - 1) * PAGE_SIZE;
-        const where = role ? { role: { name: role } } : {};
+        const where: any = {};
+
+        if (role) where.role = { name: role };
+        if (search?.trim()) {
+            where.OR = [
+                { name: { contains: search.trim(), mode: 'insensitive' } },
+                { email: { contains: search.trim(), mode: 'insensitive' } },
+            ];
+        }
 
         const [users, total] = await Promise.all([
             this.prisma.user.findMany({

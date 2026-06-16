@@ -22,8 +22,9 @@ export class AdminController {
     getUsers(
         @Query('page') page = '1',
         @Query('role') role?: string,
+        @Query('search') search?: string,
     ) {
-        return this.adminService.getUsers(Number(page), role);
+        return this.adminService.getUsers(Number(page), role, search);
     }
 
     @Patch('users/:id/role')
