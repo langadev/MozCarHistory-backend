@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -25,7 +25,7 @@ export class CarsController {
     @ApiResponse({ status: 400, description: 'Viatura já registada ou utilizador não encontrado.' })
     @ApiResponse({ status: 401, description: 'Token inválido ou ausente.' })
     @UseInterceptors(FilesInterceptor('photos', 5, { storage: memoryStorage() }))
-    async create(@Body() body: CreateCarDto, @UploadedFiles() files: Express.Multer.File[]) {
+    async create(@Body() body: CreateCarDto, @UploadedFiles() files: Express.Multer.File[], @Request() req: any) {
         try {
             let photos: string[] = [];
             if (files && files.length > 0) {
@@ -46,6 +46,7 @@ export class CarsController {
                 bodyType: body.bodyType ?? undefined,
                 initialMileage: body.initialMileage ? Number(body.initialMileage) : undefined,
                 ownerId: body.ownerId ? Number(body.ownerId) : undefined,
+                registeredById: req.user?.userId ?? undefined,
                 photos,
             });
         } catch (error: any) {

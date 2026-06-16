@@ -104,7 +104,7 @@ export class AdminService {
                     verified: true,
                     suspended: true,
                     createdAt: true,
-                    _count: { select: { cars: true, records: true } },
+                    _count: { select: { registeredCars: true, records: true } },
                 },
                 orderBy: { createdAt: 'desc' },
             }),
@@ -151,7 +151,7 @@ export class AdminService {
                 skip,
                 take: PAGE_SIZE,
                 include: {
-                    owner: { select: { name: true } },
+                    registeredBy: { select: { name: true } },
                     _count: { select: { records: true } },
                 },
                 orderBy: { createdAt: 'desc' },
