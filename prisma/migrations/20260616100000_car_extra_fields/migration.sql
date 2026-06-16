@@ -1,0 +1,4 @@
+ALTER TABLE "Car" ADD COLUMN "engineType" TEXT;
+ALTER TABLE "Car" ADD COLUMN "driveType" TEXT;
+ALTER TABLE "Car" ADD COLUMN "importYear" INTEGER;
+ALTER TABLE "Car" ADD COLUMN "situation" TEXT;

@@ -53,6 +53,16 @@ export class CreateCarDto {
     @IsString()
     engineSize?: string;
 
+    @ApiProperty({ example: 'Turbo', required: false })
+    @IsOptional()
+    @IsString()
+    engineType?: string;
+
+    @ApiProperty({ example: '4x4 (4WD)', required: false })
+    @IsOptional()
+    @IsString()
+    driveType?: string;
+
     @ApiProperty({ example: 'SUV', required: false })
     @IsOptional()
     @IsString()
@@ -64,6 +74,19 @@ export class CreateCarDto {
     @IsInt()
     @Min(0)
     initialMileage?: number;
+
+    @ApiProperty({ example: 2022, required: false })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1950)
+    @Max(new Date().getFullYear() + 1)
+    importYear?: number;
+
+    @ApiProperty({ example: 'Recém importado', required: false })
+    @IsOptional()
+    @IsString()
+    situation?: string;
 
     @ApiProperty({ example: 1, required: false })
     @IsOptional()

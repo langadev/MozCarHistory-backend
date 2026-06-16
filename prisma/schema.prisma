@@ -69,8 +69,12 @@ model Car {
   fuelType       String?
   transmission   String?
   engineSize     String?
+  engineType     String?
+  driveType      String?
   bodyType       String?
   initialMileage Int?
+  importYear     Int?
+  situation      String?
   approvalStatus String              @default("pendente")
   approvalNote   String?
   createdAt      DateTime            @default(now())
