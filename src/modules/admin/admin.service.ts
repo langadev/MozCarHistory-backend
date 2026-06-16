@@ -183,6 +183,102 @@ export class AdminService {
         return { message: 'Viatura e registos eliminados com sucesso' };
     }
 
+    async getFinanceStats() {
+        const now = new Date();
+        const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const startOf6MonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+        const [totalAgg, thisMonthAgg, lastMonthAgg, recentRecords, topWorkshopGroups, serviceTypeGroups] = await Promise.all([
+            this.prisma.maintenanceRecord.aggregate({
+                where: { cost: { not: null } },
+                _sum: { cost: true },
+                _count: { id: true },
+                _avg: { cost: true },
+            }),
+            this.prisma.maintenanceRecord.aggregate({
+                where: { date: { gte: startOfThisMonth }, cost: { not: null } },
+                _sum: { cost: true },
+                _count: { id: true },
+            }),
+            this.prisma.maintenanceRecord.aggregate({
+                where: { date: { gte: startOfLastMonth, lt: startOfThisMonth }, cost: { not: null } },
+                _sum: { cost: true },
+                _count: { id: true },
+            }),
+            this.prisma.maintenanceRecord.findMany({
+                where: { date: { gte: startOf6MonthsAgo }, cost: { not: null } },
+                select: { date: true, cost: true },
+            }),
+            this.prisma.maintenanceRecord.groupBy({
+                by: ['workshopId'],
+                where: { cost: { not: null } },
+                _sum: { cost: true },
+                _count: { _all: true },
+                orderBy: { _sum: { cost: 'desc' } },
+                take: 5,
+            }),
+            this.prisma.maintenanceRecord.groupBy({
+                by: ['serviceType'],
+                where: { cost: { not: null } },
+                _sum: { cost: true },
+                _count: { _all: true },
+                orderBy: { _sum: { cost: 'desc' } },
+                take: 6,
+            }),
+        ]);
+
+        // Build monthly chart data (last 6 months, filling gaps with 0)
+        const monthlyMap: Record<string, { revenue: number; count: number }> = {};
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            monthlyMap[key] = { revenue: 0, count: 0 };
+        }
+        for (const r of recentRecords) {
+            const d = new Date(r.date);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (monthlyMap[key]) {
+                monthlyMap[key].revenue += r.cost ?? 0;
+                monthlyMap[key].count += 1;
+            }
+        }
+        const monthlyRevenue = Object.entries(monthlyMap).map(([month, data]) => ({ month, ...data }));
+
+        // Fetch workshop names
+        const workshopIds = topWorkshopGroups.map(w => w.workshopId);
+        const workshopUsers = await this.prisma.user.findMany({
+            where: { id: { in: workshopIds } },
+            select: { id: true, name: true, email: true },
+        });
+        const workshopMap = Object.fromEntries(workshopUsers.map(w => [w.id, w]));
+        const topWorkshops = topWorkshopGroups.map(w => ({
+            id: w.workshopId,
+            name: workshopMap[w.workshopId]?.name ?? workshopMap[w.workshopId]?.email ?? '—',
+            revenue: w._sum.cost ?? 0,
+            records: w._count._all,
+        }));
+
+        const revenueByServiceType = serviceTypeGroups.map(s => ({
+            serviceType: s.serviceType ?? 'Outros',
+            revenue: s._sum.cost ?? 0,
+            count: s._count._all,
+        }));
+
+        return {
+            totalRevenue: totalAgg._sum.cost ?? 0,
+            totalRecordsWithCost: totalAgg._count.id,
+            avgCost: Math.round(totalAgg._avg.cost ?? 0),
+            thisMonthRevenue: thisMonthAgg._sum.cost ?? 0,
+            thisMonthCount: thisMonthAgg._count.id,
+            lastMonthRevenue: lastMonthAgg._sum.cost ?? 0,
+            lastMonthCount: lastMonthAgg._count.id,
+            monthlyRevenue,
+            topWorkshops,
+            revenueByServiceType,
+        };
+    }
+
     async getWorkshopDetail(id: number) {
         const workshop = await this.prisma.user.findUnique({
             where: { id },

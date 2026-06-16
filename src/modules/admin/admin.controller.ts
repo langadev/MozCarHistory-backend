@@ -44,6 +44,11 @@ export class AdminController {
         return this.adminService.updateUserStatus(id, suspended);
     }
 
+    @Get('finance')
+    getFinanceStats() {
+        return this.adminService.getFinanceStats();
+    }
+
     @Get('workshops')
     getWorkshops(
         @Query('page') page = '1',
