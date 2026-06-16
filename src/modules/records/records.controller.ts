@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, ForbiddenException, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, ForbiddenException, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { VerifiedGuard } from '../auth/verified.guard.js';
 import { CreateRecordDto } from './dto/create-record.dto.js';
+import { UpdateRecordDto } from './dto/update-record.dto.js';
 
 @ApiTags('maintenance')
 @Controller('maintenance')
@@ -84,6 +85,30 @@ export class RecordsController {
 
             throw new BadRequestException("Erro ao registar serviço: " + (error.message || "Verifique os dados."));
         }
+    }
+
+    @Get('my')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Listar registos da oficina autenticada' })
+    async findMy(@Request() req: any) {
+        return this.recordsService.findMyRecords(req.user.userId);
+    }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard, VerifiedGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Actualizar registo (apenas dentro de 48h)' })
+    async updateRecord(@Param('id') id: string, @Body() dto: UpdateRecordDto, @Request() req: any) {
+        return this.recordsService.updateRecord(Number(id), req.user.userId, dto);
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard, VerifiedGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Eliminar registo (apenas dentro de 48h)' })
+    async deleteRecord(@Param('id') id: string, @Request() req: any) {
+        return this.recordsService.deleteRecord(Number(id), req.user.userId);
     }
 
     @Get('workshop/:id')

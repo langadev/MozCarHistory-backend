@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service.js';
 import { Prisma } from '@prisma/client';
+import { UpdateCarDto } from './dto/update-car.dto.js';
 
 @Injectable()
 export class CarsService {
@@ -96,5 +97,31 @@ export class CarsService {
         return this.prisma.car.findUnique({
             where: { plateNumber },
         });
+    }
+
+    async findMyRegistered(workshopId: number) {
+        return this.prisma.car.findMany({
+            where: { registeredById: workshopId },
+            include: { _count: { select: { records: true } } },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    async updateCar(id: number, workshopId: number, dto: UpdateCarDto) {
+        const car = await this.prisma.car.findUnique({ where: { id } });
+        if (!car) throw new NotFoundException('Viatura não encontrada');
+        if (car.registeredById !== workshopId) throw new ForbiddenException('Não tem permissão para editar esta viatura');
+        return this.prisma.car.update({ where: { id }, data: dto });
+    }
+
+    async deleteCar(id: number, workshopId: number) {
+        const car = await this.prisma.car.findUnique({
+            where: { id },
+            include: { _count: { select: { records: true } } },
+        });
+        if (!car) throw new NotFoundException('Viatura não encontrada');
+        if (car.registeredById !== workshopId) throw new ForbiddenException('Não tem permissão para eliminar esta viatura');
+        if (car._count.records > 0) throw new BadRequestException('Não é possível eliminar uma viatura com registos de manutenção');
+        return this.prisma.car.delete({ where: { id } });
     }
 }

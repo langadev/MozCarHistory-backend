@@ -1,6 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service.js';
 import { Prisma } from '@prisma/client';
+import { UpdateRecordDto } from './dto/update-record.dto.js';
+
+const EDIT_WINDOW_HOURS = 48;
 
 @Injectable()
 export class RecordsService {
@@ -73,6 +76,54 @@ export class RecordsService {
             },
             orderBy: { createdAt: 'desc' },
         });
+    }
+
+    async findMyRecords(workshopId: number) {
+        return this.prisma.maintenanceRecord.findMany({
+            where: { workshopId },
+            include: {
+                car: { select: { plateNumber: true, brand: true, model: true, photos: true } },
+                mechanic: { select: { id: true, name: true, specialty: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    private assertEditable(createdAt: Date) {
+        const hoursElapsed = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+        if (hoursElapsed > EDIT_WINDOW_HOURS) {
+            throw new ForbiddenException('O prazo de 48 horas para editar este registo já expirou.');
+        }
+    }
+
+    async updateRecord(id: number, workshopId: number, dto: UpdateRecordDto) {
+        const record = await this.prisma.maintenanceRecord.findUnique({ where: { id } });
+        if (!record) throw new NotFoundException('Registo não encontrado');
+        if (record.workshopId !== workshopId) throw new ForbiddenException('Não tem permissão para editar este registo');
+        this.assertEditable(record.createdAt);
+
+        if (dto.mileage !== undefined) {
+            const prevRecord = await this.prisma.maintenanceRecord.findFirst({
+                where: { carId: record.carId, id: { not: id } },
+                orderBy: { mileage: 'desc' },
+                select: { mileage: true },
+            });
+            if (prevRecord && dto.mileage < prevRecord.mileage) {
+                throw new BadRequestException(
+                    `A quilometragem não pode ser inferior ao registo anterior (${prevRecord.mileage.toLocaleString('pt-PT')} km).`,
+                );
+            }
+        }
+
+        return this.prisma.maintenanceRecord.update({ where: { id }, data: dto });
+    }
+
+    async deleteRecord(id: number, workshopId: number) {
+        const record = await this.prisma.maintenanceRecord.findUnique({ where: { id } });
+        if (!record) throw new NotFoundException('Registo não encontrado');
+        if (record.workshopId !== workshopId) throw new ForbiddenException('Não tem permissão para eliminar este registo');
+        this.assertEditable(record.createdAt);
+        return this.prisma.maintenanceRecord.delete({ where: { id } });
     }
 
     async findAllUniqueVehicles() {

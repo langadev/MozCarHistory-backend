@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseInterceptors, UploadedFiles, BadRequestException, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -7,6 +7,7 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { VerifiedGuard } from '../auth/verified.guard.js';
 import { CreateCarDto } from './dto/create-car.dto.js';
+import { UpdateCarDto } from './dto/update-car.dto.js';
 
 @ApiTags('cars')
 @Controller('cars')
@@ -66,6 +67,30 @@ export class CarsController {
             }
             throw new BadRequestException(msg);
         }
+    }
+
+    @Get('my')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Listar viaturas registadas pela oficina autenticada' })
+    async findMy(@Request() req: any) {
+        return this.carsService.findMyRegistered(req.user.userId);
+    }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Actualizar dados de uma viatura registada pela oficina' })
+    async updateCar(@Param('id') id: string, @Body() dto: UpdateCarDto, @Request() req: any) {
+        return this.carsService.updateCar(Number(id), req.user.userId, dto);
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Eliminar uma viatura sem registos registada pela oficina' })
+    async deleteCar(@Param('id') id: string, @Request() req: any) {
+        return this.carsService.deleteCar(Number(id), req.user.userId);
     }
 
     @Get('search')
