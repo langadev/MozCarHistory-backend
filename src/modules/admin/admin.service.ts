@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import * as bcrypt from 'bcrypt';
 
 const PAGE_SIZE = 10;
 
 @Injectable()
 export class AdminService {
-    constructor(private prisma: PrismaService) {}
+    constructor(
+        private prisma: PrismaService,
+        private notificationsService: NotificationsService,
+    ) {}
 
     async getStats() {
         const [totalUsers, totalWorkshops, totalVehicles, totalRecords, pendingVehicles, recentRecords] = await Promise.all([
@@ -88,11 +92,22 @@ export class AdminService {
         const user = await this.prisma.user.findUnique({ where: { id } });
         if (!user) throw new NotFoundException('Utilizador não encontrado');
 
-        return this.prisma.user.update({
+        const updated = await this.prisma.user.update({
             where: { id },
             data: { suspended },
             select: { id: true, email: true, name: true, suspended: true },
         });
+
+        if (!suspended) {
+            await this.notificationsService.create(
+                id,
+                'account_activated',
+                'Conta Reactivada',
+                'A sua conta foi reactivada pelo administrador.',
+            );
+        }
+
+        return updated;
     }
 
     async getWorkshops(page: number, verified?: boolean) {
@@ -126,11 +141,23 @@ export class AdminService {
         const workshop = await this.prisma.user.findUnique({ where: { id } });
         if (!workshop) throw new NotFoundException('Oficina não encontrada');
 
-        return this.prisma.user.update({
+        const updated = await this.prisma.user.update({
             where: { id },
             data: { verified },
             select: { id: true, email: true, name: true, verified: true },
         });
+
+        await this.notificationsService.create(
+            id,
+            verified ? 'workshop_verified' : 'workshop_unverified',
+            verified ? 'Conta Verificada' : 'Verificação Removida',
+            verified
+                ? 'A sua oficina foi verificada. Já pode registar viaturas e serviços.'
+                : 'A verificação da sua oficina foi removida pelo administrador.',
+            '/perfil-oficina',
+        );
+
+        return updated;
     }
 
     async updateWorkshopStatus(id: number, suspended: boolean) {
@@ -171,14 +198,29 @@ export class AdminService {
     }
 
     async approveVehicle(id: number, status: 'aprovada' | 'rejeitada', note?: string) {
-        const car = await this.prisma.car.findUnique({ where: { id } });
+        const car = await this.prisma.car.findUnique({ where: { id }, select: { id: true, plateNumber: true, registeredById: true } });
         if (!car) throw new NotFoundException('Viatura não encontrada');
 
-        return this.prisma.car.update({
+        const updated = await this.prisma.car.update({
             where: { id },
             data: { approvalStatus: status, approvalNote: note ?? null },
             select: { id: true, plateNumber: true, approvalStatus: true, approvalNote: true },
         });
+
+        if (car.registeredById) {
+            const isApproved = status === 'aprovada';
+            await this.notificationsService.create(
+                car.registeredById,
+                isApproved ? 'vehicle_approved' : 'vehicle_rejected',
+                isApproved ? 'Viatura Aprovada' : 'Viatura Rejeitada',
+                isApproved
+                    ? `A viatura ${car.plateNumber} foi aprovada e já está disponível no catálogo.`
+                    : `A viatura ${car.plateNumber} foi rejeitada.${note ? ` Motivo: ${note}` : ''}`,
+                '/minhas-viaturas',
+            );
+        }
+
+        return updated;
     }
 
     async deleteVehicle(id: number) {

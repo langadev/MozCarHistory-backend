@@ -6,6 +6,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { MessagesService } from './messages.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 @WebSocketGateway({
     cors: { origin: '*' },
@@ -18,6 +19,7 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     constructor(
         private messagesService: MessagesService,
         private jwtService: JwtService,
+        private notificationsService: NotificationsService,
     ) {}
 
     // Use Socket.IO middleware so auth failures send CONNECT_ERROR (not DISCONNECT).
@@ -58,6 +60,16 @@ export class MessagesGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         const message = await this.messagesService.create(senderId, data.receiverId, data.content.trim());
 
         this.server.to(`user:${data.receiverId}`).emit('new_message', message);
+
+        // Persist a notification so the receiver sees it even when offline
+        await this.notificationsService.create(
+            data.receiverId,
+            'new_message',
+            'Nova Mensagem',
+            'Recebeu uma nova mensagem.',
+            '/mensagens',
+        );
+
         return message;
     }
 

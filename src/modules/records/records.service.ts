@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { Prisma } from '@prisma/client';
 import { UpdateRecordDto } from './dto/update-record.dto.js';
 
@@ -7,7 +8,10 @@ const EDIT_WINDOW_HOURS = 48;
 
 @Injectable()
 export class RecordsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private notificationsService: NotificationsService,
+    ) {}
 
     async create(data: Prisma.MaintenanceRecordUncheckedCreateInput) {
         const lastRecord = await this.prisma.maintenanceRecord.findFirst({
@@ -22,7 +26,23 @@ export class RecordsService {
             );
         }
 
-        return this.prisma.maintenanceRecord.create({ data });
+        const record = await this.prisma.maintenanceRecord.create({ data });
+
+        const car = await this.prisma.car.findUnique({
+            where: { id: Number(data.carId) },
+            select: { plateNumber: true, ownerId: true },
+        });
+        if (car?.ownerId) {
+            await this.notificationsService.create(
+                car.ownerId,
+                'new_record',
+                'Novo Registo de Manutenção',
+                `Foi adicionado um novo registo de manutenção à viatura ${car.plateNumber}.`,
+                `/historico?plate=${encodeURIComponent(car.plateNumber)}`,
+            );
+        }
+
+        return record;
     }
 
     async findByWorkshopId(workshopId: number) {

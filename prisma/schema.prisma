@@ -39,6 +39,7 @@ model User {
   mechanicProfile    Mechanic?           @relation("MechanicUser")
   sentMessages       Message[]           @relation("SentMessages")
   receivedMessages   Message[]           @relation("ReceivedMessages")
+  notifications      Notification[]
 }
 
 model Mechanic {
@@ -102,6 +103,19 @@ model Message {
   receiverId Int
   sender     User @relation("SentMessages",   fields: [senderId],   references: [id], onDelete: Cascade)
   receiver   User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model MaintenanceRecord {
