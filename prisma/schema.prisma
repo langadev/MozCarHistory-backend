@@ -40,6 +40,8 @@ model User {
   sentMessages       Message[]           @relation("SentMessages")
   receivedMessages   Message[]           @relation("ReceivedMessages")
   notifications      Notification[]
+  favorites          FavoriteCar[]
+  searchHistory      SearchHistory[]
 }
 
 model Mechanic {
@@ -91,6 +93,7 @@ model Car {
 
   records          MaintenanceRecord[]
   photos           String[]            @default([])
+  favoritedBy      FavoriteCar[]
 }
 
 model Message {
@@ -103,6 +106,27 @@ model Message {
   receiverId Int
   sender     User @relation("SentMessages",   fields: [senderId],   references: [id], onDelete: Cascade)
   receiver   User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model FavoriteCar {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  carId     Int
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, carId])
+}
+
+model SearchHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  query     String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
